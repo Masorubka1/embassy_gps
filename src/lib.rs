@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(test), no_std)]
 
 /// High-level GPS abstractions for Embassy projects.
 pub mod gps;

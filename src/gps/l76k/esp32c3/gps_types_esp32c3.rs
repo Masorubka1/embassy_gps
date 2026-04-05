@@ -1,6 +1,6 @@
 use esp_hal::gpio::{Level, Output, OutputConfig, OutputPin};
 
-use crate::gps::gps_interfases::GpsOutput;
+use crate::gps::GpsOutput;
 
 /// ESP32-C3 pin bundle required by the L76K hardware driver.
 pub struct GpsHw<REINIT, STANDBY>
@@ -13,7 +13,7 @@ where
 }
 
 /// Thin `GpsOutput` wrapper over `esp_hal::gpio::Output`.
-pub struct EspOutput<'d>(pub Output<'d>);
+pub(crate) struct EspOutput<'d>(pub Output<'d>);
 
 impl<'d> GpsOutput for EspOutput<'d> {
     /// Sets GPIO high.
@@ -33,7 +33,7 @@ where
     STANDBY: OutputPin + 'static,
 {
     /// Converts raw pins into configured output drivers.
-    pub fn into_outputs(self) -> (EspOutput<'static>, EspOutput<'static>) {
+    pub(crate) fn into_outputs(self) -> (EspOutput<'static>, EspOutput<'static>) {
         (
             EspOutput(Output::new(
                 self.reinit,

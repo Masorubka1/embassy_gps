@@ -1,10 +1,10 @@
 use embassy_time::{Duration, Timer};
 use embedded_io_async::{ErrorType, Read, Write};
 
-use crate::gps::gps_interfases::{GpsDriver, GpsFsm, GpsOutput};
+use crate::gps::{GpsDriver, GpsFsm, GpsOutput};
 use crate::gps::l76k::driver::L76kGps;
-use crate::gps::l76k::nrf::gps_types_nrf::{GpsHw, NrfOutput};
-use crate::gps::l76k::pcas::models::EncodedCommand;
+use crate::gps::l76k::nrf::{GpsHw, NrfOutput};
+use crate::gps::l76k::pcas::EncodedCommand;
 use crate::types::{GpsError, GpsEvent, GpsState};
 
 /// L76K finite-state machine specialized for nRF platforms.

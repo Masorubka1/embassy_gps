@@ -1,6 +1,6 @@
 use core::fmt::Write;
 
-use crate::gps::l76k::pcas::models::{
+use super::models::{
     EncodedCommand, FixedBuf, Pcas03, PcasBaudrate, PcasBuildError, PcasGnssMode, PcasRestartMode,
 };
 
@@ -102,4 +102,63 @@ pub fn encode_pcas<const N: usize>(body: &str) -> Result<EncodedCommand<N>, Pcas
         len: w.len,
         buf: out,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::gps::l76k::pcas::PcasSentenceRate;
+
+    #[test]
+    fn encode_pcas_wraps_body_with_checksum() {
+        let encoded = encode_pcas::<32>("PCAS04,3").expect("encode should succeed");
+        assert_eq!(encoded.as_str().expect("utf8"), "$PCAS04,3*1A\r\n");
+    }
+
+    #[test]
+    fn encode_pcas_fails_when_buffer_is_too_small() {
+        let err = match encode_pcas::<13>("PCAS04,3") {
+            Ok(_) => panic!("must fail on small output buffer"),
+            Err(err) => err,
+        };
+        assert_eq!(err, PcasBuildError::BufferTooSmall);
+    }
+
+    #[test]
+    fn pcas01_set_baudrate_is_encoded_correctly() {
+        let encoded = PcasCommand::Pcas01SetBaudrate(PcasBaudrate::B9600)
+            .encode::<32>()
+            .expect("encode should succeed");
+        assert_eq!(encoded.as_str().expect("utf8"), "$PCAS01,1*1D\r\n");
+    }
+
+    #[test]
+    fn pcas03_sentence_rates_are_encoded_correctly() {
+        let cfg = Pcas03 {
+            gga: PcasSentenceRate::every_n(1),
+            gll: PcasSentenceRate::OFF,
+            gsa: PcasSentenceRate::OFF,
+            gsv: PcasSentenceRate::OFF,
+            rmc: PcasSentenceRate::every_n(1),
+            vtg: PcasSentenceRate::OFF,
+            zda: PcasSentenceRate::OFF,
+            ant: PcasSentenceRate::OFF,
+        };
+
+        let encoded = PcasCommand::Pcas03SetSentenceRates(cfg)
+            .encode::<64>()
+            .expect("encode should succeed");
+        assert_eq!(
+            encoded.as_str().expect("utf8"),
+            "$PCAS03,1,0,0,0,1,0,0,0,0,0,,,0,0*02\r\n"
+        );
+    }
+
+    #[test]
+    fn pcas03_keep_fields_are_left_empty() {
+        let encoded = PcasCommand::Pcas03SetSentenceRates(Pcas03::ALL_KEEP)
+            .encode::<64>()
+            .expect("encode should succeed");
+        assert_eq!(encoded.as_str().expect("utf8"), "$PCAS03,,,,,,,,,0,0,,,0,0*02\r\n");
+    }
 }
