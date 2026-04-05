@@ -1,7 +1,7 @@
 //! PCAS command models and encoder for L76K configuration.
 
-mod models;
-mod request;
+pub mod models;
+pub mod request;
 
 pub use models::{
     EncodedCommand, Pcas03, PcasBaudrate, PcasBuildError, PcasGnssMode, PcasRestartMode,
