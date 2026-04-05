@@ -1,0 +1,32 @@
+[package]
+name = "embassy_gps"
+version = "0.1.0"
+edition = "2024"
+description = "Lightweight Embassy GPS wrapper and extensible architecture"
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+keywords = ["embassy", "gps", "embedded", "no-std"]
+categories = ["embedded", "no-std", "asynchronous"]
+
+[features]
+default = []
+
+nrf = [
+    "dep:embassy-nrf",
+]
+
+esp32c3 = [
+    "dep:esp-hal",
+    "esp-hal/esp32c3"
+]
+
+[dependencies]
+chrono = { version = "0.4", default-features = false }
+defmt = "1"
+embassy-futures = "0.1.2"
+embassy-nrf = { version = "0.10", optional = true, features = ["defmt", "time-driver-rtc1", "gpiote", "nrf52840"] }
+embassy-time = { version = "0.5", features = ["defmt"] }
+embedded-io-async = { version = "0.7.0", features = ["defmt"] }
+heapless = {version = "0.9.2", features = ["defmt"] }
+nmea = { version = "0.7.0", default-features = false, features = ["GGA", "RMC"] }
+esp-hal = { version = "1.0.0", optional = true }
