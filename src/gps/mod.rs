@@ -4,7 +4,7 @@
 //! - `l76k::pcas`: encoder for PCAS configuration commands.
 //! - `l76k::{nrf,esp32c3}`: platform glue for pin/output setup and FSM wiring.
 
-mod gps_interfases;
+pub mod gps_interfases;
 pub mod l76k;
 
 pub use gps_interfases::{GpsDriver, GpsFsm, GpsOutput};

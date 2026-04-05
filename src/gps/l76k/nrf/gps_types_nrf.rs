@@ -14,7 +14,7 @@ where
 }
 
 /// Thin `GpsOutput` wrapper over `embassy_nrf::gpio::Output`.
-pub(crate) struct NrfOutput<'d>(pub Output<'d>);
+pub struct NrfOutput<'d>(pub Output<'d>);
 
 impl<'d> GpsOutput for NrfOutput<'d> {
     /// Sets GPIO high.
@@ -34,7 +34,7 @@ where
     STANDBY: Pin,
 {
     /// Converts raw pins into configured output drivers.
-    pub(crate) fn into_outputs(self) -> (NrfOutput<'static>, NrfOutput<'static>) {
+    pub fn into_outputs(self) -> (NrfOutput<'static>, NrfOutput<'static>) {
         (
             NrfOutput(Output::new(self.reinit, Level::High, OutputDrive::Standard)),
             NrfOutput(Output::new(
