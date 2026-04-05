@@ -1,6 +1,6 @@
 use embassy_time::Duration;
 
-use crate::gps::l76k::pcas::models::EncodedCommand;
+use crate::gps::l76k::pcas::EncodedCommand;
 
 /// Async low-level GPS driver contract.
 pub trait GpsDriver {

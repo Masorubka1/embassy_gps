@@ -5,11 +5,8 @@ use nmea::{Nmea, SentenceType};
 
 use crate::{
     gps::{
-        gps_interfases::{GpsDriver, GpsOutput},
-        l76k::pcas::{
-            models::{EncodedCommand, Pcas03, PcasSentenceRate},
-            request::PcasCommand,
-        },
+        GpsDriver, GpsOutput,
+        l76k::pcas::{EncodedCommand, Pcas03, PcasCommand, PcasSentenceRate},
     },
     types::{GpsError, GpsEvent, GpsFix},
 };
@@ -30,6 +27,7 @@ where
     pending: heapless::Deque<GpsEvent, 8>,
 }
 
+#[cfg_attr(test, allow(dead_code))]
 impl<IO, RESET, STANDBY> L76kGps<IO, RESET, STANDBY>
 where
     IO: Read + Write + ErrorType,
@@ -222,5 +220,142 @@ where
             Either::First(Err(e)) => Err(GpsError::IO(e)),
             Either::Second(_) => Err(GpsError::Timeout),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use embassy_futures::block_on;
+    use embedded_io_async::{ErrorType, Read, Write};
+    use heapless::Vec;
+
+    use super::*;
+
+    /// Small no_std UART mock used by unit tests.
+    struct MockUart<const RX: usize, const TX: usize> {
+        rx: [u8; RX],
+        rx_len: usize,
+        rx_pos: usize,
+        tx: Vec<u8, TX>,
+    }
+
+    impl<const RX: usize, const TX: usize> MockUart<RX, TX> {
+        fn with_rx(data: &[u8]) -> Self {
+            assert!(data.len() <= RX);
+            let mut rx = [0u8; RX];
+            rx[..data.len()].copy_from_slice(data);
+
+            Self {
+                rx,
+                rx_len: data.len(),
+                rx_pos: 0,
+                tx: Vec::new(),
+            }
+        }
+
+        fn written(&self) -> &[u8] {
+            self.tx.as_slice()
+        }
+    }
+
+    impl<const RX: usize, const TX: usize> ErrorType for MockUart<RX, TX> {
+        type Error = embedded_io_async::ErrorKind;
+    }
+
+    impl<const RX: usize, const TX: usize> Read for MockUart<RX, TX> {
+        async fn read(&mut self, buf: &mut [u8]) -> Result<usize, Self::Error> {
+            let available = self.rx_len.saturating_sub(self.rx_pos);
+            if available == 0 {
+                return Ok(0);
+            }
+
+            let n = core::cmp::min(available, buf.len());
+            buf[..n].copy_from_slice(&self.rx[self.rx_pos..self.rx_pos + n]);
+            self.rx_pos += n;
+            Ok(n)
+        }
+    }
+
+    impl<const RX: usize, const TX: usize> Write for MockUart<RX, TX> {
+        async fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
+            let free = TX.saturating_sub(self.tx.len());
+            let n = core::cmp::min(free, buf.len());
+            if n == 0 && !buf.is_empty() {
+                return Ok(0);
+            }
+
+            self.tx
+                .extend_from_slice(&buf[..n])
+                .map_err(|_| embedded_io_async::ErrorKind::OutOfMemory)?;
+            Ok(n)
+        }
+
+        async fn flush(&mut self) -> Result<(), Self::Error> {
+            Ok(())
+        }
+    }
+
+    #[derive(Default)]
+    struct DummyPin;
+
+    impl GpsOutput for DummyPin {
+        fn set_high(&mut self) {}
+        fn set_low(&mut self) {}
+    }
+
+    fn make_test_driver() -> L76kGps<MockUart<1, 256>, DummyPin, DummyPin> {
+        L76kGps {
+            io: Some(MockUart::with_rx(&[])),
+            reinit: DummyPin,
+            _standby: DummyPin,
+            nmea: Nmea::default(),
+            line: [0; 128],
+            idx: 0,
+            pending: heapless::Deque::new(),
+        }
+    }
+
+    #[test]
+    fn mock_uart_reads_seeded_data() {
+        let mut uart = MockUart::<8, 8>::with_rx(b"ABC");
+        let mut buf = [0u8; 8];
+
+        let n = block_on(uart.read(&mut buf)).expect("read must succeed");
+        assert_eq!(n, 3);
+        assert_eq!(&buf[..n], b"ABC");
+
+        let n = block_on(uart.read(&mut buf)).expect("second read must succeed");
+        assert_eq!(n, 0);
+    }
+
+    #[test]
+    fn mock_uart_captures_written_data() {
+        let mut uart = MockUart::<1, 16>::with_rx(&[]);
+
+        block_on(async {
+            uart.write_all(b"PING").await.expect("write_all must succeed");
+            uart.flush().await.expect("flush must succeed");
+        });
+
+        assert_eq!(uart.written(), b"PING");
+    }
+
+    #[test]
+    fn consume_gga_populates_utc_millis_in_fix() {
+        let mut gps = make_test_driver();
+        let sentence = b"$GPGGA,123519.000,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*59\r\n";
+
+        let mut got_fix = None;
+        for byte in sentence {
+            if let Some(event) = gps.consume_byte(*byte).expect("line parse must succeed")
+                && let GpsEvent::Fix(fix) = event
+            {
+                got_fix = Some(fix);
+                break;
+            }
+        }
+
+        let fix = got_fix.expect("must emit fix from GGA");
+        assert_eq!(fix.utc_time_ms, Some(45_319_000));
     }
 }

@@ -1,6 +1,7 @@
 //! L76K-specific driver, command encoder, and platform adapters.
 
-pub mod driver;
+#[cfg(any(feature = "nrf", feature = "esp32c3", test))]
+mod driver;
 pub mod pcas;
 
 #[cfg(feature = "nrf")]

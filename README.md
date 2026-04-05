@@ -24,11 +24,9 @@ Right now, L76K is implemented; additional drivers can be added with the same pa
 Pseudo-code (board/UART init omitted) showing the normal flow:
 
 ```rust
-use embassy_gps::gps::gps_interfases::GpsFsm;
-use embassy_gps::gps::l76k::nrf::fsm_nrf::L76kFsm;
-use embassy_gps::gps::l76k::nrf::gps_types_nrf::GpsHw;
-use embassy_gps::gps::l76k::pcas::models::PcasGnssMode;
-use embassy_gps::gps::l76k::pcas::request::PcasCommand;
+use embassy_gps::gps::GpsFsm;
+use embassy_gps::gps::l76k::nrf::{GpsHw, L76kFsm};
+use embassy_gps::gps::l76k::pcas::{PcasCommand, PcasGnssMode};
 use embassy_gps::types::GpsEvent;
 use embassy_time::Duration;
 
@@ -65,9 +63,8 @@ async fn gps_task(hw: GpsHw<impl embassy_nrf::gpio::Pin, impl embassy_nrf::gpio:
 Same flow, but with ESP HAL types:
 
 ```rust
-use embassy_gps::gps::gps_interfases::GpsFsm;
-use embassy_gps::gps::l76k::esp32c3::fsm_esp32c3::L76kFsm;
-use embassy_gps::gps::l76k::esp32c3::gps_types_esp32c3::GpsHw;
+use embassy_gps::gps::GpsFsm;
+use embassy_gps::gps::l76k::esp32c3::{GpsHw, L76kFsm};
 use embassy_gps::types::GpsEvent;
 
 async fn gps_task(hw: GpsHw<impl esp_hal::gpio::OutputPin, impl esp_hal::gpio::OutputPin>) {
