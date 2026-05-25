@@ -8,11 +8,15 @@ pub struct EncodedCommand<const N: usize> {
 
 impl<const N: usize> EncodedCommand<N> {
     /// Returns the valid command bytes.
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         &self.buf[..self.len]
     }
 
     /// Returns the command as UTF-8 text.
+    ///
+    /// # Errors
+    /// See [`core::str::from_utf8`] errors
     pub fn as_str(&self) -> Result<&str, core::str::Utf8Error> {
         core::str::from_utf8(self.as_bytes())
     }
@@ -38,6 +42,7 @@ pub enum PcasBaudrate {
 
 impl PcasBaudrate {
     /// Returns the numeric protocol code.
+    #[must_use]
     pub fn code(self) -> u8 {
         self as u8
     }
@@ -57,6 +62,7 @@ pub enum PcasGnssMode {
 
 impl PcasGnssMode {
     /// Returns the numeric protocol code.
+    #[must_use]
     pub fn code(self) -> u8 {
         self as u8
     }
@@ -73,6 +79,7 @@ pub enum PcasRestartMode {
 
 impl PcasRestartMode {
     /// Returns the numeric protocol code.
+    #[must_use]
     pub fn code(self) -> u8 {
         self as u8
     }
@@ -87,12 +94,21 @@ impl PcasSentenceRate {
     pub const OFF: Self = Self(Some(0));
 
     /// Enables a sentence every `n` cycles.
+    ///
+    /// Note: `n` must not exceed 9
+    ///
+    /// # Panics
+    /// Invocation will panic if `n` is greater than 9
+    #[must_use]
     pub fn every_n(n: u8) -> Self {
         assert!(n <= 9);
         Self(Some(n))
     }
 
     /// Writes the field in PCAS03 comma format.
+    ///
+    /// # Errors
+    /// Fails with [`PcasBuildError::Fmt`] when the `write!` call failed
     pub fn write_to(&self, w: &mut FixedBuf<'_>) -> Result<(), PcasBuildError> {
         match self.0 {
             Some(v) => write!(w, "{v}").map_err(|_| PcasBuildError::Fmt),
@@ -153,11 +169,15 @@ impl<'a> FixedBuf<'a> {
     }
 
     /// Returns the currently written bytes.
+    #[must_use]
     pub fn as_bytes(&self) -> &[u8] {
         &self.buf[..self.len]
     }
 
     /// Appends a single byte.
+    ///
+    /// # Errors
+    /// Fails with [`PcasBuildError::BufferTooSmall`] when the allocated buffer is already full
     pub fn push_byte(&mut self, b: u8) -> Result<(), PcasBuildError> {
         if self.len >= self.buf.len() {
             return Err(PcasBuildError::BufferTooSmall);
@@ -168,6 +188,9 @@ impl<'a> FixedBuf<'a> {
     }
 
     /// Appends a byte slice.
+    ///
+    /// # Errors
+    /// Fails with [`PcasBuildError::BufferTooSmall`] when the allocated buffer is too small for the incoming data
     pub fn push_bytes(&mut self, data: &[u8]) -> Result<(), PcasBuildError> {
         if self.len + data.len() > self.buf.len() {
             return Err(PcasBuildError::BufferTooSmall);

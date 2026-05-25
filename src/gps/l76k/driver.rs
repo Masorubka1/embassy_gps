@@ -334,7 +334,9 @@ mod tests {
         let mut uart = MockUart::<1, 16>::with_rx(&[]);
 
         block_on(async {
-            uart.write_all(b"PING").await.expect("write_all must succeed");
+            uart.write_all(b"PING")
+                .await
+                .expect("write_all must succeed");
             uart.flush().await.expect("flush must succeed");
         });
 
