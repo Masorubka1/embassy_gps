@@ -15,6 +15,9 @@ pub enum PcasCommand {
 
 impl PcasCommand {
     /// Encodes a typed command into a full `$...*CS\r\n` frame.
+    ///
+    /// # Errors
+    /// Fails when writing to the buffer failed or string formatting failed
     pub fn encode<const N: usize>(&self) -> Result<EncodedCommand<N>, PcasBuildError> {
         let mut body_buf = [0u8; 96];
         let mut w = FixedBuf::new(&mut body_buf);
@@ -84,6 +87,9 @@ fn hex_upper(n: u8) -> u8 {
 }
 
 /// Wraps raw PCAS payload into a checksummed NMEA frame.
+///
+/// # Errors
+/// Fails when output buffer is already full
 pub fn encode_pcas<const N: usize>(body: &str) -> Result<EncodedCommand<N>, PcasBuildError> {
     let mut out = [0u8; N];
     let mut w = FixedBuf::new(&mut out);
@@ -159,6 +165,9 @@ mod tests {
         let encoded = PcasCommand::Pcas03SetSentenceRates(Pcas03::ALL_KEEP)
             .encode::<64>()
             .expect("encode should succeed");
-        assert_eq!(encoded.as_str().expect("utf8"), "$PCAS03,,,,,,,,,0,0,,,0,0*02\r\n");
+        assert_eq!(
+            encoded.as_str().expect("utf8"),
+            "$PCAS03,,,,,,,,,0,0,,,0,0*02\r\n"
+        );
     }
 }
