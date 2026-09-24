@@ -87,7 +87,7 @@ where
                     self.idx += 1;
                 } else {
                     self.idx = 0;
-                    defmt::warn!("gps line overflow");
+                    crate::log_warn!("gps line overflow");
                 }
                 Ok(None)
             }
@@ -137,11 +137,11 @@ where
 
     /// Pulses REINIT and waits until the module is ready again.
     async fn reset(&mut self) {
-        defmt::debug!("gps reset pulse start");
+        crate::log_debug!("gps reset pulse start");
         self.reinit.set_low();
         Timer::after(Duration::from_millis(150)).await;
         self.reinit.set_high();
-        defmt::debug!("gps reset pulse done");
+        crate::log_debug!("gps reset pulse done");
         Timer::after(Duration::from_secs(2)).await;
     }
 
@@ -169,10 +169,10 @@ where
                 Either::First(Ok(0)) => continue,
                 Either::First(Ok(n)) => {
                     for &byte in &buf[..n] {
-                        if let Some(event) = self.consume_byte(byte)? {
-                            if self.pending.push_back(event).is_err() {
-                                defmt::warn!("gps pending queue overflow");
-                            }
+                        if let Some(event) = self.consume_byte(byte)?
+                            && self.pending.push_back(event).is_err()
+                        {
+                            crate::log_warn!("gps pending queue overflow");
                         }
                     }
 
@@ -359,6 +359,6 @@ mod tests {
         }
 
         let fix = got_fix.expect("must emit fix from GGA");
-        assert_eq!(fix.utc_time_ms, Some(45_319_000));
+        assert_eq!(fix.get_utc_time_millis(), Some(45_319_000));
     }
 }
