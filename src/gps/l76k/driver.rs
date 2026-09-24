@@ -169,10 +169,10 @@ where
                 Either::First(Ok(0)) => continue,
                 Either::First(Ok(n)) => {
                     for &byte in &buf[..n] {
-                        if let Some(event) = self.consume_byte(byte)? {
-                            if self.pending.push_back(event).is_err() {
-                                crate::log_warn!("gps pending queue overflow");
-                            }
+                        if let Some(event) = self.consume_byte(byte)?
+                            && self.pending.push_back(event).is_err()
+                        {
+                            crate::log_warn!("gps pending queue overflow");
                         }
                     }
 
@@ -334,7 +334,9 @@ mod tests {
         let mut uart = MockUart::<1, 16>::with_rx(&[]);
 
         block_on(async {
-            uart.write_all(b"PING").await.expect("write_all must succeed");
+            uart.write_all(b"PING")
+                .await
+                .expect("write_all must succeed");
             uart.flush().await.expect("flush must succeed");
         });
 
@@ -357,6 +359,6 @@ mod tests {
         }
 
         let fix = got_fix.expect("must emit fix from GGA");
-        assert_eq!(fix.utc_time_ms, Some(45_319_000));
+        assert_eq!(fix.get_utc_time_millis(), Some(45_319_000));
     }
 }
